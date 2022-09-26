@@ -208,6 +208,7 @@ class LabelInput(ttk.Frame):
 
     field_types = {
         FT.string: RequiredHexEntry,
+        FT.button: ttk.Button,
         FT.short_string_list: ValidateCombobox
     }
 
@@ -229,16 +230,15 @@ class LabelInput(ttk.Frame):
                 input_args['values'] = field_spec.get('values')
 
         # setup the label
-        if input_class in (ttk.Checkbutton, ttk.Button):
-            # Buttons don't need labels, they're built-in
-            input_args["text"] = label
-        else:
+        if not input_class in (ttk.Checkbutton, ttk.Button):
             self.label = ttk.Label(self, text=label, **label_args)
             self.label.grid(row=0, column=0, sticky=(tk.W + tk.E))
+        else:
+            input_args['text'] = label
 
         # setup the variable
         if input_class in (
-            ttk.Checkbutton, ttk.Button,
+            ttk.Checkbutton,
             ttk.Radiobutton
         ):
             input_args["variable"] = self.variable
@@ -257,8 +257,14 @@ class LabelInput(ttk.Frame):
                             ipady=2, expand=True, fill='x')
         else:
             self.input = input_class(self, **input_args)
-        self.input.grid(row=1, column=0, sticky=(tk.W + tk.E))
-        self.columnconfigure(0, weight=1)
+
+        if  input_class != ttk.Button:
+            self.input.grid(row=1, column=0, sticky=(tk.W + tk.E))
+            self.columnconfigure(0, weight=1)
+        else:
+            button = input_class(self, text=label)
+            button.grid(row=1, column=0, sticky=(tk.W + tk.E))
+            button.columnconfigure(0,weight=1)
 
         self.error = getattr(self.input, 'error', tk.StringVar())
         ttk.Label(self, textvariable=self.error, foreground='red').grid(

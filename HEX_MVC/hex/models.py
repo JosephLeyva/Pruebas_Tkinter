@@ -6,6 +6,7 @@ class Model:
     fields = {
         "Lab": {'req': True, 'type': FT.string},
         "Seed": {'req': True, 'type': FT.string},
+        "Boton": {'req': True, 'type': FT.button},
         "Type": {'req': True, 'type': FT.short_string_list, 'values': ['LOG', 'DB']}
     }
 

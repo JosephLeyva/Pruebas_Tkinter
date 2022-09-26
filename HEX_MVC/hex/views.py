@@ -25,7 +25,8 @@ class DataRecordForm(tk.Frame):
         self._vars = {
             'Lab': tk.StringVar(),
             'Seed': tk.StringVar(),
-            'Type': tk.StringVar()
+            'Type': tk.StringVar(),
+            'Boton': tk.StringVar()
         }
 
         # Build the form
@@ -44,3 +45,6 @@ class DataRecordForm(tk.Frame):
         w.LabelInput(r_info, "Type", field_spec=fields['Type'],
                      var=self._vars['Type']).grid(
             row=1, column=2)
+        w.LabelInput(r_info, "Configuracion", field_spec=fields['Boton'],
+                     var=self._vars['Boton']).grid(
+            row=1, column=3)
