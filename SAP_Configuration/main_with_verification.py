@@ -282,7 +282,7 @@ class SAPRecordForm(ttk.Frame):
         LabelInput(rx_info, label="Max Number of Messages", input_args={"state": tk.DISABLED},
                    var=self._vars['Number_Msg_rx']).grid(row=2, pady=5)
 
-        LabelInput(rx_info, label="Max Message Size",
+        LabelInput(rx_info, label="Max Message Size", input_args={"max_num": 32}, input_class=RequiredNumEntry,
                    var=self._vars["Max_Msg_rx"]).grid(row=3, pady=5)
 
         LabelInput(rx_info, label="Protocol Type", input_args={"state": tk.DISABLED},
