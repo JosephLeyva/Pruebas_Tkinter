@@ -1,10 +1,8 @@
 from sys import maxsize
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 
-global flag
-flag = True
+from .constants import FieldTypes as FT
 
 
 class ValidatedMixin:
@@ -144,27 +142,34 @@ class RequiredEntry(ValidatedMixin, ttk.Entry):
         return len(proposed) <= self.max_length
 
 
-def verify_window():
-    if flag:
-        SAPWindow()
-    else:
-        messagebox.showerror(
-            title="Error!",
-            message="You just have already opened the window!")
-
-
 class LabelInput(tk.Frame):
     """A widget containing a label and input together."""
 
+    field_types = {
+        FT.boolean: ttk.Checkbutton,
+        FT.integer: RequiredNumEntry,
+        FT.string: RequiredEntry
+    }
+
     def __init__(
-        self, parent, label, var, input_class=ttk.Entry,
-        input_args=None, label_args=None, **kwargs
+        self, parent, label, var, input_class=None,
+        input_args=None, label_args=None, field_spec=None, **kwargs
     ):
         super().__init__(parent, **kwargs)
         input_args = input_args or {}
         label_args = label_args or {}
         self.variable = var
         self.variable.label_widget = self
+
+        if field_spec:
+            field_type = field_spec.get('type', FT.string)
+            input_class = input_class or self.field_types.get(field_type)
+            if 'max_length' in field_spec and 'max_length' not in input_args:
+                input_args['max_length'] = field_spec.get('max_length')
+            if 'max_num' in field_spec and 'max_num' not in input_args:
+                input_args['max_num'] = field_spec.get('max_num')
+            if 'state' in field_spec and 'state' not in input_args:
+                input_args['state'] = field_spec.get('state')
 
         # setup the label
         if input_class in (ttk.Checkbutton, ttk.Button):
@@ -199,156 +204,3 @@ class LabelInput(tk.Frame):
     def grid(self, sticky=(tk.E + tk.W), **kwargs):
         """Override grid to add default sticky values"""
         super().grid(sticky=sticky, **kwargs)
-
-
-class SAPWindow(tk.Toplevel):
-    """The SAP Configuration Window"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        global flag
-        flag = False
-
-        self.title("SAP Configuration")
-        self.geometry("500x500")
-        self.resizable(False, False)
-        self.columnconfigure(0, weight=1)
-
-        SAPRecordForm(parent=self).grid(padx=10, pady=30, sticky=(tk.E+tk.W))
-
-
-class SAPRecordForm(ttk.Frame):
-    "The form for the Transmission (TX) and Reception (RX) info"
-
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
-        self._vars = {
-            'TX_Port': tk.BooleanVar(value=False),
-            'Port_Name_tx': tk.StringVar(),
-            'Number_Msg_tx': tk.IntVar(value=10),
-            'Max_Msg_tx': tk.IntVar(),
-            'Protocol_tx': tk.StringVar(value="UDP"),
-            'Extended_Port_tx': tk.BooleanVar(value=False),
-            'RX_Port': tk.BooleanVar(value=False),
-            'Port_Name_rx': tk.StringVar(),
-            'Number_Msg_rx': tk.IntVar(value=10),
-            'Max_Msg_rx': tk.IntVar(),
-            'Protocol_rx': tk.StringVar(value='UDP'),
-            'Extended_Port_rx': tk.BooleanVar(value=False)
-        }
-
-        for i in range(2):
-            self.columnconfigure(i, weight=1)
-
-        ##################
-        # TX Information #
-        ##################
-
-        tx_info = self.add_frame(
-            text="Transmission (TX) information", column=0, row=0, padx=10)
-
-        LabelInput(tx_info, label="TX Port", var=self._vars['TX_Port'], input_class=ttk.Checkbutton).grid(
-            row=0, column=0, pady=20)
-
-        LabelInput(tx_info, label="Port Name", var=self._vars['Port_Name_tx'], input_args={"max_length": 32}, input_class=RequiredEntry).grid(
-            row=1, column=0, pady=5, ipadx=40)
-
-        LabelInput(tx_info, label="Max Number of Messages", input_args={"state": tk.DISABLED},
-                   var=self._vars['Number_Msg_tx']).grid(row=2, pady=5)
-
-        LabelInput(tx_info, label="Max Message Size", input_args={"max_num": 32}, input_class=RequiredNumEntry,
-                   var=self._vars["Max_Msg_tx"]).grid(row=3, pady=5)
-
-        LabelInput(tx_info, label="Protocol Type", input_args={"state": tk.DISABLED},
-                   var=self._vars["Protocol_tx"]).grid(row=4, pady=5)
-
-        LabelInput(tx_info, label="Extended Port",
-                   input_class=ttk.Checkbutton, var=self._vars["Extended_Port_tx"]).grid(row=5, pady=5)
-
-        ##################
-        # RX Information #
-        ##################
-
-        rx_info = self.add_frame(
-            text="Reception (RX) information", column=1, row=0, padx=10)
-
-        LabelInput(rx_info, label="RX Port", var=self._vars['RX_Port'], input_class=ttk.Checkbutton).grid(
-            row=0, column=0, pady=20)
-
-        LabelInput(rx_info, label="Port Name", var=self._vars['Port_Name_rx'], input_args={"max_length": 32}, input_class=RequiredEntry).grid(
-            row=1, column=0, pady=5, ipadx=40)
-
-        LabelInput(rx_info, label="Max Number of Messages", input_args={"state": tk.DISABLED},
-                   var=self._vars['Number_Msg_rx']).grid(row=2, pady=5)
-
-        LabelInput(rx_info, label="Max Message Size", input_args={"max_num": 32}, input_class=RequiredNumEntry,
-                   var=self._vars["Max_Msg_rx"]).grid(row=3, pady=5)
-
-        LabelInput(rx_info, label="Protocol Type", input_args={"state": tk.DISABLED},
-                   var=self._vars["Protocol_rx"]).grid(row=4, pady=5)
-
-        LabelInput(rx_info, label="Extended Port",
-                   input_class=ttk.Checkbutton, var=self._vars["Extended_Port_rx"]).grid(row=5, pady=5)
-
-        ################
-        # Button Frame #
-        ################
-
-        buttons = tk.Frame(self)
-        buttons.grid(pady=20, padx=20, columnspan=2, sticky=(tk.E+tk.W))
-        save_button = ttk.Button(buttons, text="Save", command=self.save)
-        save_button.pack(side=tk.RIGHT, padx=5)
-
-        cancel_button = ttk.Button(
-            buttons, text="Cancel", command=self.close)
-        cancel_button.pack(side=tk.RIGHT, padx=5)
-
-        self.master.protocol('WM_DELETE_WINDOW', self.close)
-
-    def save(self):
-        global flag
-        flag = True
-        self.master.destroy()
-
-    def close(self):
-        for key, variable in self._vars.items():
-            if key == 'Protocol_tx' or key == 'Protocol_rx':
-                variable.set("UDP")
-            elif key == 'Number_Msg_tx' or key == 'Number_Msg_rx':
-                variable.set(10)
-            if isinstance(variable, tk.BooleanVar):
-                variable.set(False)
-            elif isinstance(variable, tk.IntVar):
-                variable.set(0)
-            else:
-                variable.set('')
-
-        global flag
-        flag = True
-        self.master.destroy()
-
-    def add_frame(self, text='', column=0, row=0, padx=0):
-        frame = ttk.LabelFrame(self, text=text)
-        frame.grid(
-            column=column, row=row, padx=padx, sticky=(tk.W+tk.E))
-        return frame
-
-
-class Application(tk.Tk):
-    """Application root window"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.title("ConfigTool Application")
-        self.columnconfigure(0, weight=1)
-
-        ttk.Button(self, text="Configuration",
-                   command=verify_window).grid(sticky=(tk.W + tk.E))
-
-
-if __name__ == "__main__":
-    app = Application()
-    app.mainloop()
