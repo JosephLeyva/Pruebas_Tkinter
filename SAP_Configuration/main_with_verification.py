@@ -6,6 +6,143 @@ global flag
 flag = True
 
 
+class ValidatedMixin:
+    """Adds a validation functionality to an input widget"""
+
+    def __init__(self, *args, error_var=None, **kwargs):
+        self.error = error_var or tk.StringVar()
+        self.detail = tk.StringVar()
+        super().__init__(*args, **kwargs)
+
+        vcmd = self.register(self._validate)
+        invcmd = self.register(self._invalid)
+
+        self.configure(
+            validate='all',
+            validatecommand=(vcmd, '%P', '%s', '%S', '%V', '%i', '%d'),
+            invalidcommand=(invcmd, '%P', '%s', '%S', '%V', '%i', '%d')
+        )
+
+    def _toggle_error(self, on=False):
+        self.configure(foreground=('red' if on else 'black'))
+
+    def _validate(self, proposed, current, char, event, index, action):
+        """ The validation method.
+            Don't override this, override _key_validate, and _focus_validate
+        """
+        self.error.set('')
+        self._toggle_error()
+
+        valid = True
+        # if the widget is disabled, don't validate
+        state = str(self.configure('state')[-1])
+        if state == tk.DISABLED:
+            return valid
+
+        if event == 'focusout':
+            valid = self._focusout_validate(event=event)
+        elif event == 'key':
+            valid = self._key_validate(
+                proposed=proposed,
+                current=current,
+                char=char,
+                event=event,
+                index=index,
+                action=action
+            )
+        return valid
+
+    def _focusout_validate(self, **kwargs):
+        return True
+
+    def _key_validate(self, **kwargs):
+        return True
+
+    def _invalid(self, proposed, current, char, event, index, action):
+        if event == 'focusout':
+            self._focusout_invalid(event=event)
+        elif event == 'key':
+            self._key_invalid(
+                proposed=proposed,
+                current=current,
+                char=char,
+                event=event,
+                index=index,
+                action=action
+            )
+
+    def _focusout_invalid(self, **kwargs):
+        """Handle invalid data on a focus event"""
+        self._toggle_error(True)
+
+    def _key_invalid(self, **kwargs):
+        """Handle invalid data on a key event. By default we want to do nothing"""
+        pass
+
+    def trigger_focusout_validation(self):
+        valid = self._validate('', '', '', 'focusout', '', '')
+        if not valid:
+            self._focusout_invalid(event='focusout')
+        return valid
+
+
+class RequiredNumEntry(ValidatedMixin, ttk.Entry):
+    """An Entry widget that only accepts numeric input"""
+
+    def __init__(self, *args, max_num=float("inf"), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_num = int(max_num)
+
+    def _focusout_validate(self, event):
+        valid = True
+        if not self.get():
+            valid = False
+            self.error.set("A value is required")
+            print(self.error.get())
+        elif int(self.get()) > self.max_num:
+            valid = False
+            self.error.set(f"The number entered must be up to {self.max_num}")
+            print(self.error.get())
+        return valid
+
+    def _key_validate(self, proposed, current, char, event, index, action):
+        if action == '0':
+            valid = True
+        elif not char.isdigit():
+            valid = False
+        elif int(proposed) > self.max_num:
+            valid = False
+            self.error.set(f"The number entered must be up to {self.max_num}")
+            print(self.error.get())
+        else:
+            valid = char.isdigit()
+
+        return valid
+
+
+class RequiredEntry(ValidatedMixin, ttk.Entry):
+    """An Entry widget that requires a value"""
+
+    def __init__(self, *args, max_length=float("inf"), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_length = max_length
+
+    def _focusout_validate(self, event):
+        valid = True
+        if not self.get():
+            valid = False
+            self.error.set("A value is required")
+            print(self.error.get())
+        return valid
+
+    def _key_validate(self, proposed, current, char, event, index, action):
+        if not len(proposed) <= self.max_length:
+            self.error.set(
+                f"A value must be up to {self.max_length} characters")
+            print(self.error.get())
+        return len(proposed) <= self.max_length
+
+
 def verify_window():
     if flag:
         SAPWindow()
@@ -55,6 +192,7 @@ class LabelInput(tk.Frame):
             self.input = input_class(self, **input_args)
 
         self.input.grid(row=1, column=0, sticky=(tk.W + tk.E))
+
         self.columnconfigure(0, weight=1)
 
     def grid(self, sticky=(tk.E + tk.W), **kwargs):
@@ -73,6 +211,7 @@ class SAPWindow(tk.Toplevel):
 
         self.title("SAP Configuration")
         self.geometry("500x500")
+        self.resizable(False, False)
         self.columnconfigure(0, weight=1)
 
         SAPRecordForm(parent=self).grid(padx=10, pady=30, sticky=(tk.E+tk.W))
@@ -112,13 +251,13 @@ class SAPRecordForm(ttk.Frame):
         LabelInput(tx_info, label="TX Port", var=self._vars['TX_Port'], input_class=ttk.Checkbutton).grid(
             row=0, column=0, pady=20)
 
-        LabelInput(tx_info, label="Port Name", var=self._vars['Port_Name_tx']).grid(
-            row=1, column=0, pady=5)
+        LabelInput(tx_info, label="Port Name", var=self._vars['Port_Name_tx'], input_args={"max_length": 32}, input_class=RequiredEntry).grid(
+            row=1, column=0, pady=5, ipadx=40)
 
         LabelInput(tx_info, label="Max Number of Messages", input_args={"state": tk.DISABLED},
                    var=self._vars['Number_Msg_tx']).grid(row=2, pady=5)
 
-        LabelInput(tx_info, label="Max Message Size",
+        LabelInput(tx_info, label="Max Message Size", input_args={"max_num": 32}, input_class=RequiredNumEntry,
                    var=self._vars["Max_Msg_tx"]).grid(row=3, pady=5)
 
         LabelInput(tx_info, label="Protocol Type", input_args={"state": tk.DISABLED},
@@ -137,8 +276,8 @@ class SAPRecordForm(ttk.Frame):
         LabelInput(rx_info, label="RX Port", var=self._vars['RX_Port'], input_class=ttk.Checkbutton).grid(
             row=0, column=0, pady=20)
 
-        LabelInput(rx_info, label="Port Name", var=self._vars['Port_Name_rx']).grid(
-            row=1, column=0, pady=5)
+        LabelInput(rx_info, label="Port Name", var=self._vars['Port_Name_rx'], input_args={"max_length": 32}, input_class=RequiredEntry).grid(
+            row=1, column=0, pady=5, ipadx=40)
 
         LabelInput(rx_info, label="Max Number of Messages", input_args={"state": tk.DISABLED},
                    var=self._vars['Number_Msg_rx']).grid(row=2, pady=5)
@@ -173,7 +312,11 @@ class SAPRecordForm(ttk.Frame):
         self.master.destroy()
 
     def close(self):
-        for _, variable in self._vars.items():
+        for key, variable in self._vars.items():
+            if key == 'Protocol_tx' or key == 'Protocol_rx':
+                variable.set("UDP")
+            elif key == 'Number_Msg_tx' or key == 'Number_Msg_rx':
+                variable.set(10)
             if isinstance(variable, tk.BooleanVar):
                 variable.set(False)
             elif isinstance(variable, tk.IntVar):

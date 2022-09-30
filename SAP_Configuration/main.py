@@ -11,6 +11,10 @@ def save(top):
 
 def close(top):
     for key, variable in variables.items():
+        if key == 'Protocol_tx' or key == 'Protocol_rx':
+            variable.set("UDP")
+        elif key == 'Number_Msg_tx' or key == 'Number_Msg_rx':
+            variable.set(10)
         if isinstance(variable, tk.BooleanVar):
             variable.set(False)
         elif isinstance(variable, tk.IntVar):
