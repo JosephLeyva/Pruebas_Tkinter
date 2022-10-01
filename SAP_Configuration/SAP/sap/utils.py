@@ -1,13 +1,11 @@
 from tkinter import messagebox
 from .views import SAPWindow
 
-from sap import flag
+import sap
 
 
 def verify_window():
-    global flag
-    print(flag)
-    if flag:
+    if sap.flag:
         SAPWindow()
     else:
         messagebox.showerror(

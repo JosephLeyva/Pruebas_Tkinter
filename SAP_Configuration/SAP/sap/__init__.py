@@ -1,1 +1,1 @@
-global flag
+flag = True

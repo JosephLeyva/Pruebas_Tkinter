@@ -3,20 +3,19 @@ from tkinter import ttk
 from . import widgets as w
 from . import models as m
 
-from sap import flag
+import sap
+
 
 class SAPWindow(tk.Toplevel):
     """The SAP Configuration Window"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        global flag
-        flag = False
-        print(flag)
+
+        sap.flag = False
 
         self.model = m.SAPModel()
-        self.recordform = SAPRecordForm(self,self.model)
+        self.recordform = SAPRecordForm(self, self.model)
 
         self.title("SAP Configuration")
         self.geometry("500x500")
@@ -119,8 +118,7 @@ class SAPRecordForm(ttk.Frame):
         self.master.protocol('WM_DELETE_WINDOW', self.close)
 
     def save(self):
-        global flag
-        flag = False
+        sap.flag = True
         self.master.destroy()
 
     def close(self):
@@ -136,9 +134,7 @@ class SAPRecordForm(ttk.Frame):
             else:
                 variable.set('')
 
-        
-        global flag
-        flag = False
+        sap.flag = True
         self.master.destroy()
 
     def add_frame(self, text='', column=0, row=0, padx=0):
